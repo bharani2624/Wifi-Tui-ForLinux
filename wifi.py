@@ -2,10 +2,14 @@ import curses as c
 import subprocess as sp
 def wifi_list():
     result=sp.run(['nmcli','-t','-f','SSID,SECURITY','dev','wifi'],capture_output=True,text=True)
-    return result.stdout.strip().split('\n')
+    networks=result.stdout.strip().split('\n')
+    seen=set()
+    filtered_networks=[net for net in networks if net and not (net in seen or seen.add(net))]
+
+    return filtered_networks
 def connectToWifi(ssid,password=None):
     if password:
-        sp.run(['nmcli','device','wifi','connect',ssid,password])
+        sp.run(['nmcli','device','wifi','connect',ssid,'password',password])
     else:
         sp.run(['nmcli','device','wifi','connect',ssid])
 def tui(stdscr):
@@ -17,7 +21,7 @@ def tui(stdscr):
     while True:
         stdscr.clear()
         stdscr.addstr(0,0,"Networks Available:")
-        for i,WifiList in enumerate(Wifi):
+        for i,wifi in enumerate(WifiList):
             if i == selected:
                 stdscr.addstr(i+1,0,f"⭐{wifi}",c.A_REVERSE)
             else:
@@ -25,7 +29,7 @@ def tui(stdscr):
         key=stdscr.getch()
         if key == c.KEY_UP and selected > 0:
             selected -= 1
-        elif key == c.KEY_DOWN and selected < len(Wifi) - 1:
+        elif key == c.KEY_DOWN and selected < len(WifiList) - 1:
             selected += 1
         elif key == ord('\n'):
             ssid=WifiList[selected].split(":")[0]
